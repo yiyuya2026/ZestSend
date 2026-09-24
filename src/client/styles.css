@@ -819,7 +819,7 @@ html[data-native-scrollbars="true"]::-webkit-scrollbar {
   }
 }
 /* ========================================= */
-/* 自定义覆盖：纯黑底白字 */
+/* 自定义覆盖
 /* ========================================= */
 
 html, body, #root, .zest-viewport {
