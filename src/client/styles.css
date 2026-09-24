@@ -818,3 +818,50 @@ html[data-native-scrollbars="true"]::-webkit-scrollbar {
     transition: none !important;
   }
 }
+/* ========================================= */
+/* 自定义覆盖：纯黑底白字 */
+/* ========================================= */
+
+html, body, #root, .zest-viewport {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+body, p, span, h1, h2, h3, h4, h5, h6, li, a, button, input, textarea, .zest-collaboration-editor {
+  color: #ffffff !important;
+}
+
+/* 让各种卡片、面板、工具栏也是纯黑或极深灰，去掉原来的蓝色半透明底 */
+.zest-collaboration-toolbar,
+.zest-collaboration-page,
+.zest-canvas-toolbar,
+.zest-canvas-surface-wrap,
+.zest-canvas-surface,
+.zest-collaboration-link-popover,
+.glass {
+  background: #0a0a0a !important;
+  border-color: #333333 !important;
+}
+
+/* 按钮在纯黑背景下的悬停效果 */
+.zest-collaboration-tool:hover,
+.zest-canvas-tool:hover,
+.zest-canvas-color-trigger:hover {
+  background: #222222 !important;
+}
+
+/* 滚动条也改成黑灰配色 */
+:root {
+  --zest-scrollbar-thumb: #555555 !important;
+}
+.os-theme-zestsend {
+  --os-handle-bg: #555555 !important;
+  --os-handle-bg-hover: #888888 !important;
+  --os-handle-bg-active: #888888 !important;
+}
+
+/* 弹窗和对话框的黑色背景 */
+.zest-dialog-content, [role="dialog"] {
+  background: #000000 !important;
+  border: 1px solid #333333 !important;
+}
