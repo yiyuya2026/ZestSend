@@ -553,19 +553,24 @@ function FooterLinks({
   return (
     <nav aria-label="Footer navigation" className="mt-7 flex justify-center sm:mt-8">
       <div className="flex items-center gap-5 text-[clamp(0.7rem,1.6vw,0.95rem)] font-semibold text-sky-100/75 sm:gap-7">
-        {links.map((link, index) => (
-          <Clickable
-            key={link}
-            aria-label={link}
-            className="size-7 text-inherit sm:size-8"
-            onClick={actions[index]}
-          >
-            {(() => {
-              const Icon = icons[index] ?? RiInformationLine;
-              return <Icon aria-hidden="true" className="size-full" />;
-            })()}
-          </Clickable>
-        ))}
+         {links.map((link, index) => {
+          // === 新增：跳过“设置”按钮，隐藏调节背景的入口 ===
+          if (link === "设置" || link === "Settings") return null;
+          
+          return (
+            <Clickable
+              key={link}
+              aria-label={link}
+              className="size-7 text-inherit sm:size-8"
+              onClick={actions[index]}
+            >
+              {(() => {
+                const Icon = icons[index] ?? RiInformationLine;
+                return <Icon aria-hidden="true" className="size-full" />;
+              })()}
+            </Clickable>
+          );
+        })}
       </div>
     </nav>
   );
