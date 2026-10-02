@@ -124,8 +124,8 @@ const homeCopy: Record<
   }
 > = {
   en: {
-    title: "ZestSend — Private P2P file transfer",
-    heading: "ZestSend — Private P2P file transfer",
+    title: "yiyuya — Private P2P file transfer",
+    heading: "yiyuya — Private P2P file transfer",
     language: "en",
     prefix: "Anonymously",
     codeInputLabel: "Connection code digit",
@@ -133,16 +133,16 @@ const homeCopy: Record<
     footerLinks: ["Language", "Settings", "About"],
     languageDialog: {
       close: "Close language picker",
-      description: "Choose the language used on the ZestSend home page.",
+      description: "Choose the language used on the yiyuya home page.",
       title: "Language",
     },
     settingsDialog: {
       close: "Close settings",
-      description: "Choose the colors used throughout ZestSend.",
+      description: "Choose the colors used throughout yiyuya.",
       title: "Appearance",
     },
     aboutDialog: {
-      close: "Close about ZestSend",
+      close: "Close about yiyuya",
       description: "An open-source P2P connection tool for secure, private data transfer.",
       diagnostics: {
         checking: "Measuring available ICE servers...",
@@ -162,8 +162,8 @@ const homeCopy: Record<
         turn: "TURN",
         unavailable: "Unavailable",
       },
-      intro: "ZestSend is a WebRTC-powered peer-to-peer (P2P) data transfer website that lets you send data securely and privately, without server relays or storage.",
-      title: "About ZestSend",
+      intro: "yiyuya is a WebRTC-powered peer-to-peer (P2P) data transfer website that lets you send data securely and privately, without server relays or storage.",
+      title: "About yiyuya",
     },
     activities: [
       { word: "chat in real time", icon: "chat" },
@@ -179,8 +179,8 @@ const homeCopy: Record<
     ],
   },
   zh: {
-    title: "ZestSend — 私密 P2P 文件传输",
-    heading: "ZestSend — 私密 P2P 文件传输",
+    title: "yiyuya — 私密 P2P 文件传输",
+    heading: "yiyuya — 私密 P2P 文件传输",
     language: "zh-CN",
     prefix: "匿名",
     codeInputLabel: "连接数字第",
@@ -188,16 +188,16 @@ const homeCopy: Record<
     footerLinks: ["语言", "设置", "关于"],
     languageDialog: {
       close: "关闭语言选择",
-      description: "选择 ZestSend 首页使用的语言。",
+      description: "选择 yiyuya 首页使用的语言。",
       title: "语言",
     },
     settingsDialog: {
       close: "关闭设置",
-      description: "选择 ZestSend 使用的背景和强调色。",
+      description: "选择 yiyuya 使用的背景和强调色。",
       title: "外观",
     },
     aboutDialog: {
-      close: "关闭关于 ZestSend",
+      close: "关闭关于 yiyuya",
       description: "开源的 P2P 连接工具，提供安全、私密的 P2P 数据传输。",
       diagnostics: {
         checking: "正在测速可用的 ICE 服务器...",
@@ -217,8 +217,8 @@ const homeCopy: Record<
         turn: "TURN",
         unavailable: "不可用",
       },
-      intro: "ZestSend 是一个基于 WebRTC 的点对点（P2P）数据传输网站，支持安全、私密地传输数据，无需通过服务器中转或存储。",
-      title: "关于 ZestSend",
+      intro: "yiyuya 是一个基于 WebRTC 的点对点（P2P）数据传输网站，支持安全、私密地传输数据，无需通过服务器中转或存储。",
+      title: "关于 yiyuya",
     },
     activities: [
       { word: "畅聊", icon: "chat" },
@@ -936,7 +936,7 @@ export default function Home({ locale = "en" }: { locale?: HomeLocale }) {
         <h1 id="home-title" className="sr-only">{copy.heading}</h1>
         <div className="absolute inset-x-0 top-[calc(50%_-_26rem)] h-[400px] sm:top-[calc(50%_-_27rem)]" aria-hidden="true">
           <CursorDrivenParticleTypography
-            text="ZestSend"
+            text="yiyuya"
             particleDensity={2}
             particleSize={1}
             fontSize={180}

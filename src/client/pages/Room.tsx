@@ -210,7 +210,7 @@ const roomCopy = {
     roomFullTitle: "Room is full",
     returnHome: "Return home",
     pageTitle: (roomId: string) => `Connecting to room ${roomId}`,
-    roomTitle: (roomId: string) => `ZestSend room ${roomId}`,
+    roomTitle: (roomId: string) => `yiyuya room ${roomId}`,
   },
   zh: {
     connectingTitle: "正在建立端对端连接",
@@ -234,7 +234,7 @@ const roomCopy = {
     roomFullTitle: "房间已满",
     returnHome: "返回首页",
     pageTitle: (roomId: string) => `正在连接房间 ${roomId}`,
-    roomTitle: (roomId: string) => `ZestSend 房间 ${roomId}`,
+    roomTitle: (roomId: string) => `yiyuya 房间 ${roomId}`,
   },
 } as const;
 
@@ -524,7 +524,7 @@ function ConnectionDialog({
     const url = new URL(`/room/${roomId}`, window.location.origin).toString();
     try {
       if (navigator.share) {
-        await navigator.share({ title: `ZestSend ${copy.room} ${roomId}`, url });
+        await navigator.share({ title: `yiyuya ${copy.room} ${roomId}`, url });
         return;
       }
       await navigator.clipboard.writeText(url);
@@ -2546,11 +2546,11 @@ function RoomWorkspace({
                 transition={{ duration: 0.5 }}
               >
                 <a
-                  href="https://github.com/RavelloH/ZestSend"
+                  href="https://github.com/yiyuya2026/ZestSend"
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  ZestSend
+                  yiyuya
                 </a>
               </motion.h1>
               <p className="truncate text-sm font-bold tracking-[0.06em] text-sky-100/65 sm:text-xl"># {roomId}</p>
