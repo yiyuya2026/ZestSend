@@ -5,7 +5,9 @@ type ApiBindings = Env & {
   TURN_ID?: string;
   TURN_TOKEN?: string;
 };
-type ApiContext = { Bindings: ApiBindings };
+// ASSETS 由 wrangler 的 assets 绑定提供，这里显式声明，避免依赖生成的类型
+type AssetBindings = ApiBindings & { ASSETS: Fetcher };
+type ApiContext = { Bindings: AssetBindings };
 
 const app = new Hono<ApiContext>();
 
@@ -105,6 +107,25 @@ app.get("/room/:roomId", (context) => {
 
 app.get("/en/room/:roomId", (context) => localizedRoomResponse(context, "en"));
 app.get("/zh/room/:roomId", (context) => localizedRoomResponse(context, "zh"));
+
+// 法律条款页面（前端路由渲染，但必须由 Worker 显式返回 index.html）：
+// 生产环境的静态资源回退对未知路径直接返回 404，不能像开发环境那样依赖 SPA 回退，
+// 否则 /zh/privacy 之类的地址会 404。
+const LEGAL_PATHS = new Set([
+  "/en/privacy",
+  "/en/terms",
+  "/en/disclaimer",
+  "/zh/privacy",
+  "/zh/terms",
+  "/zh/disclaimer",
+]);
+
+app.get("*", (context) => {
+  const { pathname } = new URL(context.req.raw.url);
+  if (!LEGAL_PATHS.has(pathname)) return context.notFound();
+  const locale: Locale = pathname.startsWith("/zh") ? "zh" : "en";
+  return localizedResponse(context.req.raw, locale, context.env.ASSETS);
+});
 
 function methodNotAllowed(message: string): Response {
   return Response.json({ message }, { status: 405 });
