@@ -670,14 +670,19 @@ function DownloadDialog({
   const copy = homeCopy[locale].downloadDialog;
   const [size, setSize] = useState<string>("");
 
-  // 打开时探测安装包体积，用于在提示里展示
+  // 打开时探测安装包体积，用于在提示里展示。
+  // 注意：Cloudflare 静态资源只在 GET 上返回 content-length，HEAD 拿不到，
+  // 所以用 Range 只取第一个字节，从 Content-Range 里读总大小（不会真的下载整个包）。
   useEffect(() => {
     if (!open || size) return;
     let active = true;
-    void fetch(ANDROID_APK_PATH, { method: "HEAD" })
+    void fetch(ANDROID_APK_PATH, { headers: { Range: "bytes=0-0" } })
       .then((response) => {
-        if (!active || !response.ok) return;
-        setSize(formatFileSize(Number(response.headers.get("content-length") ?? 0)));
+        if (!active) return;
+        const total = Number((response.headers.get("content-range") || "").split("/")[1])
+          || Number(response.headers.get("content-length") || 0);
+        const formatted = formatFileSize(total);
+        if (formatted) setSize(formatted);
       })
       .catch(() => { /* 取不到体积就不显示 */ });
     return () => { active = false; };
