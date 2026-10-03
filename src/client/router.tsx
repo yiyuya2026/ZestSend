@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import Home from "./pages/Home";
+import Legal from "./pages/Legal";
 import LocaleRedirect from "./pages/LocaleRedirect";
 import NotFound from "./pages/NotFound";
 import Room from "./pages/Room";
@@ -44,12 +45,28 @@ const chineseRoomRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => search,
 });
 
+const legalDocumentIds = ["privacy", "terms", "disclaimer"] as const;
+
+const legalRoutes = legalDocumentIds.flatMap((documentId) => [
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: `/zh/${documentId}`,
+    component: () => <Legal documentId={documentId} locale="zh" />,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: `/en/${documentId}`,
+    component: () => <Legal documentId={documentId} locale="en" />,
+  }),
+]);
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   englishHomeRoute,
   chineseHomeRoute,
   englishRoomRoute,
   chineseRoomRoute,
+  ...legalRoutes,
 ]);
 
 export const router = createRouter({ routeTree });

@@ -283,6 +283,7 @@ function ConnectionCodeInput({
   inputLabel,
   hint,
   links,
+  locale,
   onAboutClick,
   onComplete,
   onLanguageClick,
@@ -292,6 +293,7 @@ function ConnectionCodeInput({
   inputLabel: string;
   hint: string;
   links: readonly string[];
+  locale: HomeLocale;
   onAboutClick: () => void;
   onComplete: (roomId: string) => void;
   onLanguageClick: () => void;
@@ -498,7 +500,44 @@ function ConnectionCodeInput({
         onSettingsClick={onSettingsClick}
       />
       <ProjectAttribution />
+      <LegalLinks locale={locale} />
     </div>
+  );
+}
+
+function LegalLinks({ locale }: { locale: HomeLocale }) {
+  const items =
+    locale === "zh"
+      ? [
+          { label: "隐私政策", href: "/zh/privacy" },
+          { label: "服务条款", href: "/zh/terms" },
+          { label: "免责声明", href: "/zh/disclaimer" },
+        ]
+      : [
+          { label: "Privacy", href: "/en/privacy" },
+          { label: "Terms", href: "/en/terms" },
+          { label: "Disclaimer", href: "/en/disclaimer" },
+        ];
+  const contactLabel = locale === "zh" ? "联系" : "Contact";
+
+  return (
+    <p className="mt-3 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[clamp(0.66rem,1.5vw,0.85rem)] font-semibold tracking-[0.08em] text-sky-100/55 sm:mt-4">
+      {items.map((item, index) => (
+        <span key={item.href} className="inline-flex items-center gap-x-2">
+          {index > 0 ? <span aria-hidden="true" className="text-sky-100/30">·</span> : null}
+          <a className="transition-colors hover:text-sky-100" href={item.href}>
+            {item.label}
+          </a>
+        </span>
+      ))}
+      <span aria-hidden="true" className="text-sky-100/30">·</span>
+      <span className="text-sky-100/45">
+        {contactLabel}：
+        <a className="transition-colors hover:text-sky-100" href="mailto:yiyuya2026@gmail.com">
+          yiyuya2026@gmail.com
+        </a>
+      </span>
+    </p>
   );
 }
 
@@ -992,6 +1031,7 @@ export default function Home({ locale = "en" }: { locale?: HomeLocale }) {
             hint={copy.codeHint}
             inputLabel={copy.codeInputLabel}
             links={copy.footerLinks}
+            locale={locale}
             onAboutClick={() => setAboutDialogOpen(true)}
             onComplete={handleRoomCodeComplete}
             onLanguageClick={() => setLanguageDialogOpen(true)}
