@@ -13,6 +13,7 @@ import {
   RiMusicFill,
   RiPhoneFill,
   RiCheckLine,
+  RiDownload2Line,
   RiRadarLine,
   RiSettings3Line,
   RiVideoChatFill,
@@ -92,6 +93,15 @@ const homeCopy: Record<
       description: string;
       title: string;
     };
+    downloadDialog: {
+      cancel: string;
+      close: string;
+      description: string;
+      hint: string;
+      sizeLabel: string;
+      start: string;
+      title: string;
+    };
     settingsDialog: {
       close: string;
       description: string;
@@ -130,11 +140,20 @@ const homeCopy: Record<
     prefix: "Anonymously",
     codeInputLabel: "Connection code digit",
     codeHint: "Connect by entering any four digits that match someone else's.",
-    footerLinks: ["Language", "Settings", "About"],
+    footerLinks: ["Language", "Download", "Settings", "About"],
     languageDialog: {
       close: "Close language picker",
       description: "Choose the language used on the yiyuya home page.",
       title: "Language",
+    },
+    downloadDialog: {
+      cancel: "Cancel",
+      close: "Close download dialog",
+      description: "An Android package (APK) will be downloaded.",
+      hint: "Android may warn about installing apps from unknown sources — allow it in the prompt. iOS users can keep using the web version.",
+      sizeLabel: "Package size",
+      start: "Download",
+      title: "Download yiyuya",
     },
     settingsDialog: {
       close: "Close settings",
@@ -185,11 +204,20 @@ const homeCopy: Record<
     prefix: "匿名",
     codeInputLabel: "连接数字第",
     codeHint: "与其他人输入任意四位相同数字来连接",
-    footerLinks: ["语言", "设置", "关于"],
+    footerLinks: ["语言", "下载", "设置", "关于"],
     languageDialog: {
       close: "关闭语言选择",
       description: "选择 yiyuya 首页使用的语言。",
       title: "语言",
+    },
+    downloadDialog: {
+      cancel: "取消",
+      close: "关闭下载提示",
+      description: "将下载安卓安装包（APK）",
+      hint: "安装时系统会提示「未知来源应用」，需要在弹窗里允许安装。iOS 用户请直接使用网页版。",
+      sizeLabel: "安装包体积",
+      start: "开始下载",
+      title: "下载 yiyuya",
     },
     settingsDialog: {
       close: "关闭设置",
@@ -286,6 +314,7 @@ function ConnectionCodeInput({
   locale,
   onAboutClick,
   onComplete,
+  onDownloadClick,
   onLanguageClick,
   onSettingsClick,
 }: {
@@ -296,6 +325,7 @@ function ConnectionCodeInput({
   locale: HomeLocale;
   onAboutClick: () => void;
   onComplete: (roomId: string) => void;
+  onDownloadClick: () => void;
   onLanguageClick: () => void;
   onSettingsClick: () => void;
 }) {
@@ -496,6 +526,7 @@ function ConnectionCodeInput({
       <FooterLinks
         links={links}
         onAboutClick={onAboutClick}
+        onDownloadClick={onDownloadClick}
         onLanguageClick={onLanguageClick}
         onSettingsClick={onSettingsClick}
       />
@@ -578,40 +609,129 @@ function ProjectAttribution() {
 function FooterLinks({
   links,
   onAboutClick,
+  onDownloadClick,
   onLanguageClick,
   onSettingsClick,
 }: {
   links: readonly string[];
   onAboutClick: () => void;
+  onDownloadClick: () => void;
   onLanguageClick: () => void;
   onSettingsClick: () => void;
 }) {
-  const icons = [RiGlobalLine, RiSettings3Line, RiInformationLine];
-  const actions = [onLanguageClick, onSettingsClick, onAboutClick];
-
   return (
     <nav aria-label="Footer navigation" className="mt-7 flex justify-center sm:mt-8">
       <div className="flex items-center gap-5 text-[clamp(0.7rem,1.6vw,0.95rem)] font-semibold text-sky-100/75 sm:gap-7">
-         {links.map((link, index) => {
-          // === 新增：跳过“设置”按钮，隐藏调节背景的入口 ===
+         {links.map((link) => {
+          // === 跳过“设置”按钮，隐藏调节背景的入口 ===
           if (link === "设置" || link === "Settings") return null;
-          
+
+          // 按标签名明确对应图标与动作，避免数组下标错位
+          const entry = link === "语言" || link === "Language"
+            ? { Icon: RiGlobalLine, onClick: onLanguageClick }
+            : link === "下载" || link === "Download"
+              ? { Icon: RiDownload2Line, onClick: onDownloadClick }
+              : { Icon: RiInformationLine, onClick: onAboutClick };
+
           return (
             <Clickable
               key={link}
               aria-label={link}
               className="size-7 text-inherit sm:size-8"
-              onClick={actions[index]}
+              onClick={entry.onClick}
             >
-              {(() => {
-                const Icon = icons[index] ?? RiInformationLine;
-                return <Icon aria-hidden="true" className="size-full" />;
-              })()}
+              <entry.Icon aria-hidden="true" className="size-full" />
             </Clickable>
           );
         })}
       </div>
     </nav>
+  );
+}
+
+/** APK 下载地址与文件名（放在 public/downloads/ 下，随站点一起部署） */
+const ANDROID_APK_PATH = "/downloads/yiyuya.apk";
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+}
+
+function DownloadDialog({
+  locale,
+  onOpenChange,
+  open,
+}: {
+  locale: HomeLocale;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  const copy = homeCopy[locale].downloadDialog;
+  const [size, setSize] = useState<string>("");
+
+  // 打开时探测安装包体积，用于在提示里展示
+  useEffect(() => {
+    if (!open || size) return;
+    let active = true;
+    void fetch(ANDROID_APK_PATH, { method: "HEAD" })
+      .then((response) => {
+        if (!active || !response.ok) return;
+        setSize(formatFileSize(Number(response.headers.get("content-length") ?? 0)));
+      })
+      .catch(() => { /* 取不到体积就不显示 */ });
+    return () => { active = false; };
+  }, [open, size]);
+
+  const startDownload = () => {
+    const anchor = document.createElement("a");
+    anchor.href = ANDROID_APK_PATH;
+    anchor.download = "yiyuya.apk";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent aria-describedby="download-dialog-description" aria-labelledby="download-dialog-title" className="!max-w-md">
+        <DialogHeader className="p-5 sm:p-6">
+          <div>
+            <DialogTitle id="download-dialog-title" className="text-xl sm:text-2xl">{copy.title}</DialogTitle>
+            <DialogDescription id="download-dialog-description" className="mt-1 text-xs sm:text-sm">
+              {copy.description}
+            </DialogDescription>
+          </div>
+          <DialogClose aria-label={copy.close} data-dialog-autofocus />
+        </DialogHeader>
+        <div className="space-y-5 px-5 pb-5 sm:px-6 sm:pb-6">
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-relaxed text-sky-100/80">
+            <p className="font-semibold text-sky-50">yiyuya-1.0.apk</p>
+            <p className="mt-1 text-xs text-sky-100/60">
+              {size ? `${copy.sizeLabel} ${size} · ` : ""}Android 7.0+
+            </p>
+          </div>
+          <p className="text-xs leading-relaxed text-sky-100/55">{copy.hint}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-sky-100/80 transition-colors hover:bg-white/[0.06]"
+              onClick={() => onOpenChange(false)}
+              type="button"
+            >
+              {copy.cancel}
+            </button>
+            <button
+              className="rounded-lg bg-sky-100 px-4 py-2 text-sm font-bold text-slate-900 transition-opacity hover:opacity-90"
+              onClick={startDownload}
+              type="button"
+            >
+              {copy.start}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -628,17 +748,9 @@ function LanguageDialog({
 }) {
   const copy = homeCopy[locale].languageDialog;
   const { theme } = useTheme();
-  const options: Array<{ locale: HomeLocale; name: string; preview: string }> = [
-    {
-      locale: "zh",
-      name: "简体中文",
-      preview: "我能吞下玻璃而不伤身体",
-    },
-    {
-      locale: "en",
-      name: "English",
-      preview: "I can eat glass and it doesn't hurt me.",
-    },
+  const options: Array<{ locale: HomeLocale; name: string }> = [
+    { locale: "zh", name: "简体中文" },
+    { locale: "en", name: "English" },
   ];
 
   return (
@@ -663,7 +775,7 @@ function LanguageDialog({
               <button
                 key={option.locale}
                 aria-pressed={selected}
-                className={`relative flex min-h-24 flex-col justify-center gap-2 px-5 py-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-sky-100/60 sm:px-6 sm:py-6 ${
+                className={`relative flex min-h-16 items-center justify-between gap-4 px-5 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-sky-100/60 sm:px-6 sm:py-5 ${
                   selected
                     ? "text-sky-50"
                     : "text-sky-50 hover:bg-white/[0.04]"
@@ -674,10 +786,7 @@ function LanguageDialog({
               >
                 {selected ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5" style={{ backgroundColor: theme.accent }} /> : null}
                 <span className="text-lg font-bold tracking-[0.04em] sm:text-xl">{option.name}</span>
-                <span className="flex w-full items-center justify-between gap-4 text-sm font-medium leading-relaxed tracking-[0.04em] text-sky-100/60 sm:text-base">
-                  <span>{option.preview}</span>
-                  {selected ? <RiCheckLine aria-label="Selected" className="size-5 shrink-0" style={{ color: theme.accent }} /> : null}
-                </span>
+                {selected ? <RiCheckLine aria-label="Selected" className="size-5 shrink-0" style={{ color: theme.accent }} /> : null}
               </button>
             );
           })}
@@ -935,6 +1044,7 @@ export default function Home({ locale = "en" }: { locale?: HomeLocale }) {
   const copy = homeCopy[locale];
   const morphActivities = useMemo(() => shuffled(copy.activities), [copy.activities]);
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
+  const [isDownloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [isLanguageDialogOpen, setLanguageDialogOpen] = useState(false);
   const [isSettingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isDiagnosticsDialogOpen, setDiagnosticsDialogOpen] = useState(false);
@@ -1034,6 +1144,7 @@ export default function Home({ locale = "en" }: { locale?: HomeLocale }) {
             locale={locale}
             onAboutClick={() => setAboutDialogOpen(true)}
             onComplete={handleRoomCodeComplete}
+            onDownloadClick={() => setDownloadDialogOpen(true)}
             onLanguageClick={() => setLanguageDialogOpen(true)}
             onSettingsClick={() => setSettingsDialogOpen(true)}
           />
@@ -1043,6 +1154,11 @@ export default function Home({ locale = "en" }: { locale?: HomeLocale }) {
           onOpenChange={setLanguageDialogOpen}
           onSelect={handleLanguageSelect}
           open={isLanguageDialogOpen}
+        />
+        <DownloadDialog
+          locale={locale}
+          onOpenChange={setDownloadDialogOpen}
+          open={isDownloadDialogOpen}
         />
         <SettingsDialog
           locale={locale}
