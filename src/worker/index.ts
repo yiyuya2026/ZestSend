@@ -108,24 +108,11 @@ app.get("/room/:roomId", (context) => {
 app.get("/en/room/:roomId", (context) => localizedRoomResponse(context, "en"));
 app.get("/zh/room/:roomId", (context) => localizedRoomResponse(context, "zh"));
 
-// 法律条款页面（前端路由渲染，但必须由 Worker 显式返回 index.html）：
-// 生产环境的静态资源回退对未知路径直接返回 404，不能像开发环境那样依赖 SPA 回退，
-// 否则 /zh/privacy 之类的地址会 404。
-const LEGAL_PATHS = new Set([
-  "/en/privacy",
-  "/en/terms",
-  "/en/disclaimer",
-  "/zh/privacy",
-  "/zh/terms",
-  "/zh/disclaimer",
-]);
-
-app.get("*", (context) => {
-  const { pathname } = new URL(context.req.raw.url);
-  if (!LEGAL_PATHS.has(pathname)) return context.notFound();
-  const locale: Locale = pathname.startsWith("/zh") ? "zh" : "en";
-  return localizedResponse(context.req.raw, locale, context.env.ASSETS);
-});
+// 法律条款页面（/zh/privacy 等）由静态资源层的 SPA 回退提供 index.html
+// （wrangler.jsonc 里配置了 not_found_handling: "single-page-application"），
+// 前端路由负责渲染内容。这里刻意不加 catch-all 兜底路由：
+// Hono 按注册顺序匹配，任何 catch-all 都会把 /api/* 或页面路径吞掉，
+// 之前就因此导致信令 WebSocket 全部 404（无法建立连接）。
 
 function methodNotAllowed(message: string): Response {
   return Response.json({ message }, { status: 405 });
