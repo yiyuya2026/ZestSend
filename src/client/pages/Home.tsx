@@ -416,8 +416,8 @@ function ConnectionCodeInput({
                   inputRefs.current[index] = element;
                 }}
                 aria-label={`${inputLabel} ${index + 1}`}
-                autoComplete="one-time-code"
-                className="absolute inset-0 z-10 h-full w-full appearance-none border-0 bg-transparent p-0 text-transparent caret-transparent outline-none placeholder:text-transparent selection:bg-transparent selection:text-transparent"
+                autoComplete="off"
+                className="zest-code-input absolute inset-0 z-10 h-full w-full appearance-none border-0 bg-transparent p-0 text-transparent caret-transparent outline-none placeholder:text-transparent selection:bg-transparent selection:text-transparent"
                 inputMode="numeric"
                 maxLength={1}
                 onBlur={() => setFocusedIndex(null)}

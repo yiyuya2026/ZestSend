@@ -819,7 +819,7 @@ html[data-native-scrollbars="true"]::-webkit-scrollbar {
   }
 }
 /* ========================================= */
-/* 自定义覆盖
+/* 自定义覆盖 */
 /* ========================================= */
 
 html, body, #root, .zest-viewport {
@@ -830,6 +830,28 @@ html, body, #root, .zest-viewport {
 body, p, span, h1, h2, h3, h4, h5, h6, li, a, button, input, textarea, .zest-collaboration-editor {
   color: #ffffff !important;
 }
+
+/* 房间码输入框：数字由上层自绘（大号数字），原生输入的字符必须彻底不可见。
+   上面的全局 color: #ffffff !important 会压掉 Tailwind 的 text-transparent，
+   所以这里用 !important + -webkit-text-fill-color 双重兜底，否则会出现「两个数字重叠」。 */
+input.zest-code-input {
+  color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* 法律条款页面：保留设计上的文字层级（标题纯白、正文淡色），
+   不受上面全局纯白规则影响，否则整页会变成刺眼的纯白墙。 */
+[data-yiyuya-legal] :is(p, span, h1, h2, h3, h4, h5, h6, li, a, button, div) {
+  color: inherit;
+}
+[data-yiyuya-legal] .text-sky-50 { color: rgb(240 249 255) !important; }
+[data-yiyuya-legal] .text-sky-100\/75 { color: rgb(224 242 254 / 0.75) !important; }
+[data-yiyuya-legal] .text-sky-100\/80 { color: rgb(224 242 254 / 0.8) !important; }
+[data-yiyuya-legal] .text-sky-100\/70 { color: rgb(224 242 254 / 0.7) !important; }
+[data-yiyuya-legal] .text-sky-100\/60 { color: rgb(224 242 254 / 0.6) !important; }
+[data-yiyuya-legal] .text-sky-100\/55 { color: rgb(224 242 254 / 0.55) !important; }
+[data-yiyuya-legal] .text-sky-100\/45 { color: rgb(224 242 254 / 0.45) !important; }
 
 /* 让各种卡片、面板、工具栏也是纯黑或极深灰，去掉原来的蓝色半透明底 */
 .zest-collaboration-toolbar,

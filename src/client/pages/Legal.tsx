@@ -478,7 +478,7 @@ export default function Legal({
 
   return (
     <Layout title={`${doc.heading} · yiyuya`}>
-      <div className="zest-viewport w-full overflow-y-auto overscroll-contain">
+      <div className="zest-viewport w-full overflow-y-auto overscroll-contain" data-yiyuya-legal>
         <div className="mx-auto flex w-full max-w-3xl flex-col px-4 py-10 sm:px-6 sm:py-14">
           <nav className="flex flex-wrap items-center justify-between gap-3 text-[0.8rem] font-semibold tracking-[0.06em] text-sky-100/70 sm:text-sm">
             <a className="transition-colors hover:text-sky-50" href={homePath}>
