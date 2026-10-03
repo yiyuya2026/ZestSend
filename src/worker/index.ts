@@ -168,6 +168,29 @@ app.post("/api/turn/credentials", async (context) => {
 
 app.all("/api/turn/credentials", () => methodNotAllowed("Method not allowed"));
 
+/**
+ * 页面壳兜底（必须放在所有 /api 路由之后！）
+ *
+ * wrangler.jsonc 的 run_worker_first 把这些页面路径交给 Worker 处理：
+ *   "/", "/en", "/zh", "/room/*", "/en/room/*", "/zh/room/*", 以及 6 个法律页路径。
+ * 这些路径必须由 Worker 显式返回 index.html —— 只返回 404 并不会回退到静态资源的
+ * SPA 回退（not_found_handling 只对"没进 Worker"的请求生效）。
+ *
+ * ⚠️ 千万不要把这里改成吞掉 /api/* 的形式，也不要把这段挪到 /api 路由前面：
+ * Hono 按注册顺序匹配，之前就是因为兜底路由排在信令路由之前，
+ * 导致 /api/rooms/:id/ws 全部 404，整个应用无法建立连接。
+ */
+app.get("*", (context) => {
+  const { pathname } = new URL(context.req.raw.url);
+  // 未命中的 /api/* 交给正常 404，不要误当成页面请求
+  if (pathname.startsWith("/api/")) return context.notFound();
+  const locale: Locale = pathname.startsWith("/zh") ? "zh" : "en";
+  // 用 /index.html 请求静态资源，确保拿到的是页面壳而不是别的路由结果
+  const assetUrl = new URL(context.req.raw.url);
+  assetUrl.pathname = "/index.html";
+  return localizedResponse(new Request(assetUrl.toString(), context.req.raw), locale, context.env.ASSETS);
+});
+
 app.onError((error, context) => {
   console.error(JSON.stringify({ event: "api_error", path: context.req.path, message: error.message }));
   return context.json({ message: "服务器错误" }, 500);
