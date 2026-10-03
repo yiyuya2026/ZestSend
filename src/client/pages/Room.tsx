@@ -355,8 +355,12 @@ function latencyColor(latency: number, realtimeConnection = false): string {
     return "text-rose-300";
   }
 
-  if (latency <= 250) return "text-emerald-300";
-  if (latency <= 1_000) return "text-amber-300";
+  // 非实时连接场景：这里的数字是「ICE/STUN 发现耗时」而不是网络往返时间，
+  // 它天然包含创建 RTCPeerConnection、生成 offer、ICE 收集启动与 DNS 解析，
+  // 移动网络下还会叠加蜂窝无线电唤醒，健康值就在数百毫秒量级，
+  // 所以阈值必须比真实 RTT 宽松，否则一个完全正常的连接也会被标成红色。
+  if (latency <= 1_200) return "text-emerald-300";
+  if (latency <= 3_000) return "text-amber-300";
   return "text-rose-300";
 }
 
@@ -2303,6 +2307,13 @@ function FileWorkspace({ accent, files, locale, onAccept, onCancel, onDelete, on
               <DiagnosticItem label={locale === "zh" ? "SCTP 拥塞窗口" : "SCTP congestion window"} value={diagnostics.transport.sctpCongestionWindow === null ? "--" : formatByteCount(diagnostics.transport.sctpCongestionWindow)} />
               <DiagnosticItem label={locale === "zh" ? "SCTP 接收窗口" : "SCTP receiver window"} value={diagnostics.transport.sctpReceiverWindow === null ? "--" : formatByteCount(diagnostics.transport.sctpReceiverWindow)} />
             </div> : <p className="px-5 py-6 text-sm font-medium tracking-[0.04em] text-sky-100/55 sm:px-6">{locale === "zh" ? "正在读取本地传输状态..." : "Reading local transfer state..."}</p>}
+            {diagnostics ? (
+              <p className="border-t border-white/10 px-5 py-3 text-[0.7rem] leading-relaxed tracking-[0.03em] text-sky-100/45 sm:px-6">
+                {locale === "zh"
+                  ? "「ICE RTT」才是到对端的真实网络往返时间。连接建立过程中显示的「延迟」是发现可用 ICE 服务器的耗时，包含创建连接、生成协商信息与 ICE 收集，数值天然偏大，不代表网络慢。"
+                  : "\"ICE RTT\" is the real network round-trip time to the peer. The latency shown while a connection is being established is the time taken to discover a usable ICE server (connection setup, negotiation, ICE gathering), so it is naturally larger and does not indicate a slow network."}
+              </p>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

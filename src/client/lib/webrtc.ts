@@ -267,16 +267,39 @@ async function probeIceServer(
 let icePreparationPromise: Promise<IcePreparationResult> | null = null;
 let iceConnectionPreparationPromise: Promise<IceConnectionPreparationResult> | null = null;
 let resolveIceConnectionPreparation: ((result: IceConnectionPreparationResult) => void) | null = null;
+let icePreparationCompletedAt = 0;
+let icePreparationServers: RTCIceServer[] = [];
+/**
+ * TURN 凭据的 TTL（服务端与 Cloudflare 约定的都是 1 小时），
+ * 用它的 80% 作为缓存有效期：超过就重新拉取，避免带着过期凭据建连。
+ */
+const ICE_PREPARATION_TTL_MS = 60 * 60 * 1_000 * 0.8;
+
 let icePreparationSnapshot: Pick<ConnectionProgress, IcePreparationStep> = {
   resource: pendingStep("Waiting to request Cloudflare resources"),
   stun: pendingStep("Checking STUN server"),
   turn: pendingStep("Checking TURN server"),
 };
+
 const icePreparationListeners = new Set<IcePreparationListener>();
 
 function updateIcePreparation(step: IcePreparationStep, status: ConnectionStep): void {
   icePreparationSnapshot = { ...icePreparationSnapshot, [step]: status };
   for (const listener of icePreparationListeners) listener(step, status);
+}
+
+/**
+ * 清空 ICE 准备缓存。
+ * 「一个可用服务器都没探到」属于失败，必须清掉缓存，
+ * 否则下一次建连会拿到一个已经 resolve 的旧 promise（永远是空服务器列表），
+ * 整场会话都无法自愈。
+ */
+function resetIcePreparationCache(): void {
+  icePreparationPromise = null;
+  iceConnectionPreparationPromise = null;
+  resolveIceConnectionPreparation = null;
+  icePreparationCompletedAt = 0;
+  icePreparationServers = [];
 }
 
 function notifyIcePreparation(listener: IcePreparationListener): void {
@@ -285,21 +308,33 @@ function notifyIcePreparation(listener: IcePreparationListener): void {
   listener("turn", icePreparationSnapshot.turn);
 }
 
-async function fetchCloudflareIceServers(): Promise<CloudflareIceResponse> {
+async function fetchCloudflareIceServers(timeoutMs = 6_000): Promise<CloudflareIceResponse> {
   const startedAt = performance.now();
+  const latency = () => Math.round(performance.now() - startedAt);
+  // 必须带超时：这个请求若一直挂起，ICE 准备永远不会完成，
+  // 首页会一直停在「正在请求 Cloudflare ICE 资源」，既不报错也不重试。
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch("/api/turn/credentials", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ttl: 3_600 }),
+      signal: controller.signal,
     });
     const body = (await response.json().catch(() => ({}))) as TurnResponse;
-    const latency = Math.round(performance.now() - startedAt);
     return response.ok
-      ? { ...body, latency }
-      : { iceServers: [], error: body.error ?? "TURN credentials could not be generated.", latency };
-  } catch {
-    return { iceServers: [], error: "TURN credentials could not be generated.", latency: Math.round(performance.now() - startedAt) };
+      ? { ...body, latency: latency() }
+      : { iceServers: [], error: body.error ?? "TURN credentials could not be generated.", latency: latency() };
+  } catch (error) {
+    const timedOut = (error as DOMException | undefined)?.name === "AbortError";
+    return {
+      iceServers: [],
+      error: timedOut ? "TURN credentials request timed out." : "TURN credentials could not be generated.",
+      latency: latency(),
+    };
+  } finally {
+    window.clearTimeout(timer);
   }
 }
 
@@ -313,7 +348,22 @@ export function prepareIceServers(listener?: IcePreparationListener): Promise<Ic
     notifyIcePreparation(listener);
   }
 
+  // 缓存不再永久有效：
+  // 1) 超过有效期（TURN 凭据已过期）必须重新准备；
+  // 2) 上一次准备「一个可用服务器都没探到」属于失败，不能缓存，
+  //    否则一次超时会让整场会话一直显示「STUN 服务器不可用」，且不会自愈。
+  const cacheExpired = icePreparationCompletedAt > 0
+    && Date.now() - icePreparationCompletedAt > ICE_PREPARATION_TTL_MS;
+  const cacheFailed = icePreparationCompletedAt > 0 && icePreparationServers.length === 0;
+  if (cacheExpired || cacheFailed) resetIcePreparationCache();
+
   if (!icePreparationPromise) {
+    icePreparationSnapshot = {
+      resource: pendingStep("Waiting to request Cloudflare resources"),
+      stun: pendingStep("Checking STUN server"),
+      turn: pendingStep("Checking TURN server"),
+    };
+    for (const listener of icePreparationListeners) notifyIcePreparation(listener);
     iceConnectionPreparationPromise = new Promise<IceConnectionPreparationResult>((resolve) => {
       resolveIceConnectionPreparation = resolve;
     });
@@ -375,7 +425,7 @@ export function prepareIceServers(listener?: IcePreparationListener): Promise<Ic
         });
         resolveIceConnectionPreparation = null;
       };
-      const stunProbePromises = stunCandidates.map(({ provider, server }) => probeIceServer(server, "srflx", 4_500, provider));
+      const stunProbePromises = stunCandidates.map(({ provider, server }) => probeIceServer(server, "srflx", 3_500, provider));
       const observedStunProbes = stunProbePromises.map((probe, index) => probe.then((result) => {
         completedStunProbes += 1;
         if (result && !readyStunServers.some((entry) => entry.provider === result.provider) && readyStunServers.length < 3) {
@@ -478,12 +528,21 @@ export function prepareIceServers(listener?: IcePreparationListener): Promise<Ic
             },
       );
 
+      const usableServers = [...selectedStunServers.map(({ server }) => server), ...turnCandidates];
+      if (usableServers.length === 0) {
+        // 准备失败：不要把失败结果缓存下来（见 resetIcePreparationCache 的说明）
+        resetIcePreparationCache();
+      } else {
+        icePreparationCompletedAt = Date.now();
+        icePreparationServers = usableServers;
+      }
+
       return {
-        completedAt: Date.now(),
+        completedAt: icePreparationCompletedAt,
         diagnostics,
         duration: Math.round(performance.now() - preparationStartedAt),
         resource: icePreparationSnapshot.resource,
-        servers: [...selectedStunServers.map(({ server }) => server), ...turnCandidates],
+        servers: usableServers,
         stun,
         turn,
       };
